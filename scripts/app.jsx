@@ -1,9 +1,11 @@
-var TodoBox = React.createClass({
+'use strict';
+
+var TodoApp = React.createClass({
 
   loadDataFromServer: function() {
     $.ajax({
       url: this.props.url,
-      //dataType: 'json',
+      dataType: 'json',
       cache: false,
       success: function(data) {
         this.setState({data: data});
@@ -13,11 +15,9 @@ var TodoBox = React.createClass({
       }.bind(this)
     });
   },
-
   handleTaskSubmit: function(task) {
     var tasks = this.state.data;
 
-    //task.id = Date.now();
     var newTasks = tasks.concat([task]);
     this.setState({data: newTasks});
 
@@ -36,23 +36,114 @@ var TodoBox = React.createClass({
     });
   },
 
+  deleteTask: function(e) {
+    e.preventDefault();
+    var taskIndex = parseInt(e.target.value, 10);
+
+    $.ajax({
+      url: this.props.url,
+      dataType: 'json',
+      type: 'POST',
+      data: { delete: true, id: taskIndex },
+      success: function(data) {
+        this.setState({data: data});
+      }.bind(this),
+      error: function(xhr, status, err) {
+        //this.setState({data: tasks});
+        console.error(status, err.toString());
+      }.bind(this)
+    });
+
+  },
+/*
+нужно хранить в стейт еще и редактируемый элемент
+передвать его в форму
+в список передавать только список
+ */
+  editTask: function(e) {
+    e.preventDefault();
+    var taskIndex = parseInt(e.target.value, 10);
+    console.log('azaza');
+
+    var book = $.extend({}, this.state.books.filter(function(x) {
+      return x.id == id;
+    })[0] );
+
+  },
+
   getInitialState: function() {
-    return {data: []};
+    return {
+      data: [],
+      inEditor: {
+        TaskTitle: "",
+        TaskMessage: "",
+      },
+      search: ""
+    };
   },
   componentDidMount: function() {
     this.loadDataFromServer();
     setInterval(this.loadDataFromServer, this.props.pollInterval);
   },
-  componentWillUnmount: function() {
-
-  },
   render: function() {
     return (
-      <section className="content">
-        <h1>React CRUD app</h1>
-      	<TodoForm onTaskSubmit={this.handleTaskSubmit} />
-      	<TodoList data={this.state.data} />
-      </section>
+      <div className="wrapp">
+        <h1 className="app-title">React CRUD app</h1>
+        <section className="content">
+          <TodoList data={this.state.data} deleteTask={this.deleteTask} editTask={this.editTask}/>
+          <TodoForm onTaskSubmit={this.handleTaskSubmit} inEditor={this.state.inEditor} />
+        </section>
+      </div>
+    );
+  }
+});
+
+var TodoList = React.createClass({
+
+  render: function() {
+    var taskNodes = this.props.data.map(function(task) {
+      return (
+        <Task 
+          title={task.TaskTitle} 
+          key={task.TaskId} 
+          Taskid={task.TaskId} 
+          text={task.TaskMessage} 
+          time={task.TaskTime} 
+          deleteTask={this.props.deleteTask}
+          editTask={this.props.editTask}>
+        </Task>
+      );
+    }.bind(this));
+    return (
+      <ul className="tasksList">
+        {taskNodes}
+      </ul>
+    );
+  }
+});
+
+var Task = React.createClass({
+
+  render: function() {
+    return (
+      <li className="task" >
+        <h4 className="task-title">{this.props.title}</h4>
+        <p className="task-data" >{this.props.text}</p>    
+
+        <div className="taskButtons">
+          <button 
+            className="editTask" 
+            onClick={this.props.editTask} 
+            value={this.props.Taskid} 
+          >edit</button>
+          <button 
+            className="deleteTask" 
+            onClick={this.props.deleteTask} 
+            value={this.props.Taskid} 
+          >delete</button>          
+        </div>
+
+      </li>
     );
   }
 });
@@ -82,70 +173,28 @@ var TodoForm = React.createClass({
     this.setState({TaskTitle: '', TaskMessage: ''});
   },
 
-
   render: function() {
     return (
     <form className="task-form" onSubmit={this.handleSubmit} >
-	    <input 
-		    type="text" 
-		    placeholder="title" 
+      <input 
+        type="text" 
+        placeholder="title" 
         value={this.state.TaskTitle}
         onChange={this.handleTaskTitleChange}
-		    required 
-		    autofocus
-	    />
-	    <textarea 
-		    name="message" 
-		    placeholder="description" 
+         
+        autofocus
+      />
+      <textarea 
+        name="message" 
+        placeholder="description" 
         value={this.state.TaskMessage}
         onChange={this.handleTaskMessageChange}
-		    required 
-	    ></textarea>
-	    <button type="submit">send</button>                  
+         
+      ></textarea>
+      <button type="submit">create</button>                  
     </form>
     );
   }
 });
 
-var TodoList = React.createClass({
-  deleteTask: function(e) {
-    //e.preventDefault();
-
-  },
-
-  editTask: function(e) {
-    //e.preventDefault();
-
-  },
-  render: function() {
-    var taskNodes = this.props.data.map(function(task) {
-      return (
-        <Task title={task.TaskTitle} key={task.TaskId} id={task.TaskId} text={task.TaskMessage} time={task.TaskTime} >
-
-        </Task>
-      );
-    });
-    return (
-      <ul className="commentList">
-        {taskNodes}
-      </ul>
-    );
-  }
-});
-
-var Task = React.createClass({
-  render: function() {
-    return (
-      <li className="task" >
-	      <h4 className="task-title">{this.props.title}</h4>
-	      <p className="task-data" >{this.props.text}</p>
-	      <button type="submit" className="task-delete" onSubmit={this.props.deleteTask} >del</button>
-        <button type="submit" className="task-edit" onSubmit={this.props.editTask} >edit</button>
-   		</li>
-    );
-  }
-});
-
-
-
-ReactDOM.render(<TodoBox url="http://bananagarden.net/lab/react-crud-app/api/" pollInterval={5000} />, document.getElementById('content'));
+ReactDOM.render(<TodoApp url="/lab/react-crud-app/api/"  pollInterval={5000} />, document.getElementById('root'));
