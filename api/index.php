@@ -20,12 +20,25 @@
 		$task = new Task();
 
 		if ( $_POST['delete'] == true) {
+
 			$taskID = $task->clearData($_POST['id']);
 			$task->deleteTask($taskID);
+
 		} else {
+
 			$TaskTitle = $task->clearData($_POST['TaskTitle']);
-			$TaskMessage = $task->clearData($_POST['TaskMessage']);		
-			$task->addTask($TaskTitle, $TaskMessage);
+			$TaskMessage = $task->clearData($_POST['TaskMessage']);	
+
+			if ($_POST['edit'] == true) {
+
+				$taskID = $task->clearData($_POST['id']);
+				$task->updateTask($taskID, $TaskTitle, $TaskMessage);
+
+			}	else {
+
+				$task->addTask($TaskTitle, $TaskMessage);
+			}
+			
 		}
 
 		$data =  $task->getAll();
@@ -36,11 +49,11 @@
 
 	});
 
-	$app->delete('/', function ($request, $response, $args) {
+	$app->put('/', function ($request, $response, $args) {
 
 
 		$task = new Task();
-		$task->deleteTask($args['id']);
+		$task->updateTask($args['id']);
 
 		$data =  $task->getAll();
 		$response = $response->withJson($data)->withHeader('Content-Type', 'application/json');

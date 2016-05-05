@@ -57,8 +57,7 @@ class Task
 
 	/*
 	* выбираем все таски из базы
-	* 1 - активные
-	* 0 - архив
+	* 
 	*/
 	public function getAll() {
 
@@ -74,8 +73,7 @@ class Task
 
 
 	/*
-	* берем текущее время и айпи жертвы
-	* и записываем таску в базу	
+	* записываем в базу	
 	*/
 	public function addTask($TaskTitle, $TaskMessage) {
 
@@ -93,27 +91,12 @@ class Task
 	}
 
 	/*
-	* берем текущее время (время удаления, завершения таски)
-	* меняем поле active на 0, т.е. архивируем 
+	* обновление 
+	* 
 	*/
-	public function toArchive($del) {
-		$fin = date('d-m-Y G:i');
-		$this->db->exec("UPDATE tasks SET active=0, finish='$fin' WHERE id='$del'");
-	}
+	public function updateTask($taskID, $TaskTitle, $TaskMessage) {
 
-	/*
-	* выбираем последнюю добавленную таску
-	* отдаем жсон
-	*/
-	public function selectLast() {
-		try 
-		{
-		   $sth = $this->db->prepare("SELECT * FROM $this->tablename ORDER BY TaskId DESC LIMIT 1");
-		   $sth->execute();
-
-         return self::toJson($sth);
-
-		} catch (PDOException $e) { echo $e->getMessage(); }
+		$this->db->exec("UPDATE $this->tablename SET TaskTitle='$TaskTitle', TaskMessage='$TaskMessage' WHERE TaskId=$taskID");
 
 	}
 

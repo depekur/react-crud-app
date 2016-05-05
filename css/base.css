@@ -83,7 +83,7 @@ section.content {
 			vertical-align: top;
 			margin: 5px auto 5px;
 			padding: 5px;
-			font-size: 1.1em;
+			font-size: 1em;
 			text-align: left;
 		}
 
@@ -98,21 +98,24 @@ section.content {
 		}
 
 		section.content .task-form button {
-			width: 100px;
+			float: left;
+			margin-right: 10px;
+			width: 90px;
 			text-align: center;
-			margin: 0;
 		}
 
 	.tasksList {
-		border: 1px solid #ccc;
-		border-bottom: none;
+		border-bottom: 1px solid #ccc;
 		width: 600px;
+		height: 100%;
 		box-sizing: border-box;
 	}
 
 	.tasksList .task{
 		padding: 15px;
-		border-bottom: 1px solid #ccc;
+		border: 1px solid #ccc;
+		border-bottom: none;
+
 		-webkit-transition: 0.2s;
 		-moz-transition: 0.2s;
 		-ms-transition: 0.2s;

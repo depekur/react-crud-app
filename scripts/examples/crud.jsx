@@ -1,3 +1,5 @@
+// http://spapas.github.io/2015/06/05/comprehensive-react-flux-tutorial/#local-state
+
 var SearchPanel = React.createClass({
   render: function() {
     return (

@@ -2,6 +2,23 @@
 
 var TodoApp = React.createClass({
 
+  getInitialState: function() {
+    return {
+      data: [],
+      editor: {
+        TaskTitle: "",
+        TaskMessage: "",
+        TaskId: "",
+      },
+      search: ""
+    };
+  },
+
+  componentDidMount: function() {
+    this.loadDataFromServer();
+    setInterval(this.loadDataFromServer, this.props.pollInterval);
+  },
+
   loadDataFromServer: function() {
     $.ajax({
       url: this.props.url,
@@ -15,30 +32,78 @@ var TodoApp = React.createClass({
       }.bind(this)
     });
   },
+
   handleTaskSubmit: function(task) {
-    var tasks = this.state.data;
+    if (this.state.editor.TaskId) {
+      /*
+       *   update
+       */
+      $.ajax({
+        url: this.props.url,
+        dataType: 'json',
+        type: 'POST',
+        data: { 
+          edit: true, 
+          id: this.state.editor.TaskId,
+          TaskTitle: this.state.editor.TaskTitle,
+          TaskMessage: this.state.editor.TaskMessage
+        },
+        success: function(data) {
+          this.setState({
+            data: data,
+            editor: {
+              TaskTitle: '',
+              TaskMessage: '',
+              TaskId: '',
+            }
+          });
+        }.bind(this),
+        error: function(xhr, status, err) {
+          //this.setState({data: tasks});
+          console.error(this.props.url, status, err.toString());
+        }.bind(this)
+      });
+    } else {
+      /*
+       *   create
+       */
+      if (this.state.data == null) {
+        var newTasks = task;
+      } else {
+        var tasks = this.state.data;
+        var newTasks = tasks.concat([task]);
+      }
 
-    var newTasks = tasks.concat([task]);
-    this.setState({data: newTasks});
+      this.setState({data: newTasks});
 
-    $.ajax({
-      url: this.props.url,
-      dataType: 'json',
-      type: 'POST',
-      data: task,
-      success: function(data) {
-        this.setState({data: data});
-      }.bind(this),
-      error: function(xhr, status, err) {
-        this.setState({data: tasks});
-        console.error(this.props.url, status, err.toString());
-      }.bind(this)
-    });
+      $.ajax({
+        url: this.props.url,
+        dataType: 'json',
+        type: 'POST',
+        data: task,
+        success: function(data) {
+          this.setState({
+            data: data,
+            editor: {
+              TaskTitle: '',
+              TaskMessage: '',
+              TaskId: '',
+            }
+          });
+        }.bind(this),
+        error: function(xhr, status, err) {
+          this.setState({data: tasks});
+          console.error(this.props.url, status, err.toString());
+        }.bind(this)
+      });
+
+    }
   },
 
   deleteTask: function(e) {
     e.preventDefault();
-    var taskIndex = parseInt(e.target.value, 10);
+    //var taskIndex = parseInt(e.target.value, 10);
+    var taskIndex = parseInt(this.state.editor.TaskId, 10);
 
     $.ajax({
       url: this.props.url,
@@ -46,7 +111,14 @@ var TodoApp = React.createClass({
       type: 'POST',
       data: { delete: true, id: taskIndex },
       success: function(data) {
-        this.setState({data: data});
+        this.setState({
+          data: data,
+          editor: {
+            TaskTitle: '',
+            TaskMessage: '',
+            TaskId: '',
+          }
+        });
       }.bind(this),
       error: function(xhr, status, err) {
         //this.setState({data: tasks});
@@ -55,45 +127,120 @@ var TodoApp = React.createClass({
     });
 
   },
-/*
-нужно хранить в стейт еще и редактируемый элемент
-передвать его в форму
-в список передавать только список
- */
+
   editTask: function(e) {
     e.preventDefault();
     var taskIndex = parseInt(e.target.value, 10);
-    console.log('azaza');
 
-    var book = $.extend({}, this.state.books.filter(function(x) {
-      return x.id == id;
+    var task = $.extend({}, this.state.data.filter(function(x) {
+      return x.TaskId == taskIndex;
     })[0] );
 
+    this.setState({
+      editor: {
+        TaskTitle: task.TaskTitle,
+        TaskMessage: task.TaskMessage,
+        TaskId: taskIndex,
+      }
+    });
+    console.log(this.state);
+
   },
 
-  getInitialState: function() {
-    return {
-      data: [],
-      inEditor: {
-        TaskTitle: "",
-        TaskMessage: "",
-      },
-      search: ""
-    };
+  onEditorChange: function(title, message) {
+    this.setState({
+      editor: {
+        TaskTitle: title,
+        TaskMessage: message,
+        TaskId: this.state.editor.TaskId,
+      }
+    });
   },
-  componentDidMount: function() {
-    this.loadDataFromServer();
-    setInterval(this.loadDataFromServer, this.props.pollInterval);
+
+  handleDeleteClick: function(e) {
+    e.preventDefault();
   },
+
+  handleCancelClick: function(e) {
+    e.preventDefault();
+    this.setState({
+      editor: {
+        TaskTitle: '',
+        TaskMessage: '',
+        TaskId: ''
+      }
+    });
+  },
+  
   render: function() {
     return (
       <div className="wrapp">
         <h1 className="app-title">React CRUD app</h1>
         <section className="content">
-          <TodoList data={this.state.data} deleteTask={this.deleteTask} editTask={this.editTask}/>
-          <TodoForm onTaskSubmit={this.handleTaskSubmit} inEditor={this.state.inEditor} />
+
+          <TodoList 
+            data={this.state.data} 
+            editTask={this.editTask}
+          />
+
+          <TodoForm 
+            onTaskSubmit={this.handleTaskSubmit} 
+            onChange={this.onEditorChange}
+            editor={this.state.editor} 
+            handleDeleteClick={this.deleteTask}
+            handleCancelClick={this.handleCancelClick}
+          />
+
         </section>
       </div>
+    );
+  }
+});
+
+var TodoForm = React.createClass({
+
+  handleSubmit: function(e, title, message) {
+    e.preventDefault();
+    var TaskTitle = this.refs.title.value.trim();
+    var TaskMessage = this.refs.message.value.trim();
+    if (!TaskTitle || !TaskMessage) {
+      return;
+    }
+    this.props.onTaskSubmit({TaskTitle: TaskTitle, TaskMessage: TaskMessage});
+    this.refs.title.value = '';
+    this.refs.message.value = '';
+  },
+
+  onChange: function() {
+    var title = this.refs.title.value;
+    var message = this.refs.message.value;
+    this.props.onChange(title, message);
+  },
+  
+  render: function() {
+    return (
+    <form className="task-form" onSubmit={this.handleSubmit} >
+      <input 
+        ref="title"
+        type="text" 
+        placeholder="title" 
+        value={this.props.editor.TaskTitle}      
+        onChange={this.onChange}   
+        autofocus
+      />
+      <textarea 
+        ref="message"
+        name="message" 
+        placeholder="description" 
+        value={this.props.editor.TaskMessage}  
+        onChange={this.onChange}       
+      ></textarea>
+      <button type="submit">{this.props.editor.TaskId?"update":"create"}</button>  
+
+      {this.props.editor.TaskId?<button onClick={this.props.handleDeleteClick}>delete</button>:null}
+      {this.props.editor.TaskId?<button onClick={this.props.handleCancelClick}>cancel</button>:null}
+
+    </form>
     );
   }
 });
@@ -101,6 +248,29 @@ var TodoApp = React.createClass({
 var TodoList = React.createClass({
 
   render: function() {
+
+    if (this.props.data == null) {
+      return <h2 className="error">nothing found</h2>;
+
+    }
+  /*
+       else if(this.props.data.length === 1) {
+          console.log(this.props.data.length);
+          return (
+            <ul className="tasksList">
+              <Task 
+                title={this.props.data[0].TaskTitle} 
+                key={this.props.data[0].TaskId} 
+                Taskid={this.props.data[0].TaskId} 
+                text={this.props.data[0].TaskMessage} 
+                time={this.props.data[0].TaskTime} 
+                deleteTask={this.props.deleteTask}
+                editTask={this.props.editTask}>
+              </Task>
+            </ul>
+          ); 
+      } 
+  */
     var taskNodes = this.props.data.map(function(task) {
       return (
         <Task 
@@ -109,7 +279,6 @@ var TodoList = React.createClass({
           Taskid={task.TaskId} 
           text={task.TaskMessage} 
           time={task.TaskTime} 
-          deleteTask={this.props.deleteTask}
           editTask={this.props.editTask}>
         </Task>
       );
@@ -119,6 +288,9 @@ var TodoList = React.createClass({
         {taskNodes}
       </ul>
     );
+
+
+    
   }
 });
 
@@ -136,11 +308,7 @@ var Task = React.createClass({
             onClick={this.props.editTask} 
             value={this.props.Taskid} 
           >edit</button>
-          <button 
-            className="deleteTask" 
-            onClick={this.props.deleteTask} 
-            value={this.props.Taskid} 
-          >delete</button>          
+        
         </div>
 
       </li>
@@ -148,53 +316,6 @@ var Task = React.createClass({
   }
 });
 
-var TodoForm = React.createClass({
 
-  getInitialState: function() {
-    return {TaskTitle: '', TaskMessage: ''};
-  },
-
-  handleTaskTitleChange: function(e) {
-    this.setState({TaskTitle: e.target.value});
-  },
-
-  handleTaskMessageChange: function(e) {
-    this.setState({TaskMessage: e.target.value});
-  },
-
-  handleSubmit: function(e) {
-    e.preventDefault();
-    var TaskTitle = this.state.TaskTitle.trim();
-    var TaskMessage = this.state.TaskMessage.trim();
-    if (!TaskTitle || !TaskMessage) {
-      return;
-    }
-    this.props.onTaskSubmit({TaskTitle: TaskTitle, TaskMessage: TaskMessage});
-    this.setState({TaskTitle: '', TaskMessage: ''});
-  },
-
-  render: function() {
-    return (
-    <form className="task-form" onSubmit={this.handleSubmit} >
-      <input 
-        type="text" 
-        placeholder="title" 
-        value={this.state.TaskTitle}
-        onChange={this.handleTaskTitleChange}
-         
-        autofocus
-      />
-      <textarea 
-        name="message" 
-        placeholder="description" 
-        value={this.state.TaskMessage}
-        onChange={this.handleTaskMessageChange}
-         
-      ></textarea>
-      <button type="submit">create</button>                  
-    </form>
-    );
-  }
-});
 
 ReactDOM.render(<TodoApp url="/lab/react-crud-app/api/"  pollInterval={5000} />, document.getElementById('root'));
