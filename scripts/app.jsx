@@ -10,27 +10,33 @@ var TodoApp = React.createClass({
         TaskMessage: "",
         TaskId: "",
       },
-      search: ""
+      searchQuery: ""
     };
   },
 
   componentDidMount: function() {
     this.loadDataFromServer();
     setInterval(this.loadDataFromServer, this.props.pollInterval);
+    
   },
 
-  loadDataFromServer: function() {
-    $.ajax({
-      url: this.props.url,
-      dataType: 'json',
-      cache: false,
-      success: function(data) {
-        this.setState({data: data});
-      }.bind(this),
-      error: function(xhr, status, err, data) {
-        console.error(this.props.url, status, err.toString(), data);
-      }.bind(this)
-    });
+  loadDataFromServer: function(query) {
+    if (this.state.searchQuery && (query !== false) ) {
+      return null;
+
+    } else if (query == false || !query) {
+      $.ajax({
+        url: this.props.url,
+        dataType: 'json',
+        cache: false,
+        success: function(data) {
+          this.setState({data: data});
+        }.bind(this),
+        error: function(xhr, status, err, data) {
+          console.error(this.props.url, status, err.toString(), data);
+        }.bind(this)
+      });
+    } 
   },
 
   handleTaskSubmit: function(task) {
@@ -132,19 +138,17 @@ var TodoApp = React.createClass({
     e.preventDefault();
     var taskIndex = parseInt(e.target.value, 10);
 
-    var task = $.extend({}, this.state.data.filter(function(x) {
+    var task = this.state.data.filter(function(x) {
       return x.TaskId == taskIndex;
-    })[0] );
+    });
 
     this.setState({
       editor: {
-        TaskTitle: task.TaskTitle,
-        TaskMessage: task.TaskMessage,
+        TaskTitle: task[0].TaskTitle,
+        TaskMessage: task[0].TaskMessage,
         TaskId: taskIndex,
       }
     });
-    console.log(this.state);
-
   },
 
   onEditorChange: function(title, message) {
@@ -157,10 +161,6 @@ var TodoApp = React.createClass({
     });
   },
 
-  handleDeleteClick: function(e) {
-    e.preventDefault();
-  },
-
   handleCancelClick: function(e) {
     e.preventDefault();
     this.setState({
@@ -171,6 +171,31 @@ var TodoApp = React.createClass({
       }
     });
   },
+
+  onSearch: function(query) {
+
+    var filteredData = this.state.data.filter(function(el) {
+        var searchValue = el.TaskTitle.toLowerCase();
+        return searchValue.indexOf(query) !== -1;
+    }.bind(this));
+
+    this.setState({
+      data: filteredData,
+      searchQuery: query
+    });
+
+    //console.log('query: ' + query );
+    //console.log('searchQuery: ' + this.state.searchQuery );
+
+    if ( query == '') {
+      this.loadDataFromServer(false);
+    }
+
+  },
+
+  onClearSearch: function() {
+    this.loadDataFromServer(false);
+  },
   
   render: function() {
     return (
@@ -178,10 +203,18 @@ var TodoApp = React.createClass({
         <h1 className="app-title">React CRUD app</h1>
         <section className="content">
 
-          <TodoList 
-            data={this.state.data} 
-            editTask={this.editTask}
-          />
+          <div>
+            <SearchForm 
+              onSearch={this.onSearch}
+              searchQuery={this.state.searchQuery}
+              onClearSearch={this.onClearSearch}
+            />
+
+            <TodoList 
+              data={this.state.data} 
+              editTask={this.editTask}
+            />
+          </div>
 
           <TodoForm 
             onTaskSubmit={this.handleTaskSubmit} 
@@ -207,8 +240,6 @@ var TodoForm = React.createClass({
       return;
     }
     this.props.onTaskSubmit({TaskTitle: TaskTitle, TaskMessage: TaskMessage});
-    this.refs.title.value = '';
-    this.refs.message.value = '';
   },
 
   onChange: function() {
@@ -251,26 +282,8 @@ var TodoList = React.createClass({
 
     if (this.props.data == null) {
       return <h2 className="error">nothing found</h2>;
-
     }
-  /*
-       else if(this.props.data.length === 1) {
-          console.log(this.props.data.length);
-          return (
-            <ul className="tasksList">
-              <Task 
-                title={this.props.data[0].TaskTitle} 
-                key={this.props.data[0].TaskId} 
-                Taskid={this.props.data[0].TaskId} 
-                text={this.props.data[0].TaskMessage} 
-                time={this.props.data[0].TaskTime} 
-                deleteTask={this.props.deleteTask}
-                editTask={this.props.editTask}>
-              </Task>
-            </ul>
-          ); 
-      } 
-  */
+
     var taskNodes = this.props.data.map(function(task) {
       return (
         <Task 
@@ -312,6 +325,34 @@ var Task = React.createClass({
         </div>
 
       </li>
+    );
+  }
+});
+
+var SearchForm = React.createClass({
+
+  onSearch: function() {
+    var query = this.refs.search.value.toLowerCase();
+    this.props.onSearch(query);
+    var button = true;
+  },
+
+  onClearSearch: function() {
+    this.refs.search.value = '';
+    this.props.onClearSearch();
+  },
+
+  render: function() {
+    return (
+      <div className="searchForm">
+        Search: &nbsp;
+        <input 
+          ref="search"
+          type="text" 
+          onChange={this.onSearch}
+        />
+        {this.props.searchQuery?<button onClick={this.onClearSearch} >x</button>:null}
+      </div>
     );
   }
 });

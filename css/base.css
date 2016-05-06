@@ -71,6 +71,21 @@ section.content {
 	justify-content: space-between;
 }
 
+section.content .searchForm {
+	font-size: 1.1em;
+}
+
+section.content .searchForm input {
+	margin: 5px auto 5px;
+	padding: 5px;
+	text-align: left;
+}
+
+section.content .searchForm button {
+	margin: 5px;
+	padding: 5px 7px;
+}
+
 
 
 	section.content .task-form {
@@ -88,13 +103,14 @@ section.content {
 		}
 
 		section.content .task-form input {
-			width: 300px;
+			width: 350px;
 			margin-top: 0;
 		}
 
 		section.content .task-form textarea {
-			height: 70px;
-			width: 300px;
+			height: 100px;
+			width: 350px;
+			max-width: 350px;
 		}
 
 		section.content .task-form button {
