@@ -3,3 +3,4 @@ vendor
 api/config.ini
 config.ini
 sftp-config.json
+examples

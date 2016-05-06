@@ -10,7 +10,8 @@ var TodoApp = React.createClass({
         TaskMessage: "",
         TaskId: "",
       },
-      searchQuery: ""
+      searchQuery: "",
+      message: ""
     };
   },
 
@@ -63,6 +64,9 @@ var TodoApp = React.createClass({
               TaskId: '',
             }
           });
+
+          this.setMessage(this.props.updateMessage);
+
         }.bind(this),
         error: function(xhr, status, err) {
           //this.setState({data: tasks});
@@ -96,6 +100,9 @@ var TodoApp = React.createClass({
               TaskId: '',
             }
           });
+
+          this.setMessage(this.props.addMessage);
+
         }.bind(this),
         error: function(xhr, status, err) {
           this.setState({data: tasks});
@@ -108,7 +115,6 @@ var TodoApp = React.createClass({
 
   deleteTask: function(e) {
     e.preventDefault();
-    //var taskIndex = parseInt(e.target.value, 10);
     var taskIndex = parseInt(this.state.editor.TaskId, 10);
 
     $.ajax({
@@ -125,9 +131,11 @@ var TodoApp = React.createClass({
             TaskId: '',
           }
         });
+
+        this.setMessage(this.props.deleteMessage);
+
       }.bind(this),
       error: function(xhr, status, err) {
-        //this.setState({data: tasks});
         console.error(status, err.toString());
       }.bind(this)
     });
@@ -174,27 +182,40 @@ var TodoApp = React.createClass({
 
   onSearch: function(query) {
 
-    var filteredData = this.state.data.filter(function(el) {
+    if ( this.state.data !== null ) {
+      var filteredData = this.state.data.filter(function(el) {
         var searchValue = el.TaskTitle.toLowerCase();
         return searchValue.indexOf(query) !== -1;
-    }.bind(this));
+      }.bind(this));
 
-    this.setState({
-      data: filteredData,
-      searchQuery: query
-    });
+      this.setState({
+        data: filteredData,
+        searchQuery: query
+      });
 
-    //console.log('query: ' + query );
-    //console.log('searchQuery: ' + this.state.searchQuery );
-
-    if ( query == '') {
-      this.loadDataFromServer(false);
+      if ( query == '') {
+        this.loadDataFromServer(false);
+      }
     }
-
   },
 
   onClearSearch: function() {
     this.loadDataFromServer(false);
+    this.setState({
+      searchQuery: ''
+    });
+  },
+
+  setMessage: function(message) {
+    this.setState({
+      message: message
+    });
+
+    setTimeout(function(){
+      this.setState({
+        message: ''
+      });
+    }.bind(this), this.props.messageTimeout );
   },
   
   render: function() {
@@ -222,6 +243,7 @@ var TodoApp = React.createClass({
             editor={this.state.editor} 
             handleDeleteClick={this.deleteTask}
             handleCancelClick={this.handleCancelClick}
+            message={this.state.message}
           />
 
         </section>
@@ -270,6 +292,8 @@ var TodoForm = React.createClass({
 
       {this.props.editor.TaskId?<button onClick={this.props.handleDeleteClick}>delete</button>:null}
       {this.props.editor.TaskId?<button onClick={this.props.handleCancelClick}>cancel</button>:null}
+
+      {this.props.message?<div className="message">{this.props.message}</div>:null}
 
     </form>
     );
@@ -359,4 +383,11 @@ var SearchForm = React.createClass({
 
 
 
-ReactDOM.render(<TodoApp url="/lab/react-crud-app/api/"  pollInterval={5000} />, document.getElementById('root'));
+ReactDOM.render(<TodoApp 
+  url="/lab/react-crud-app/api/"  
+  pollInterval={5000} 
+  messageTimeout={3000}
+  addMessage="сообщение успешно добавлено"
+  deleteMessage="сообщение успешно удалено"
+  updateMessage="сообщение успешно обновлено"
+/>, document.getElementById('root'));
